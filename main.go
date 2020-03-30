@@ -9,12 +9,12 @@ import (
 	"time"
 )
 
-var version = "0.3.0"
+var version = "0.3.1"
 
 // init() is called before main()
 func init() {
 	if len(os.Args) != 2 {
-		fmt.Println("Usage: ./gosub <dir_to_pbs_files>")
+		fmt.Printf("Usage: ./gosub <dir_to_pbs_files>\t(version:%s)\n", version)
 		os.Exit(-1)
 	}
 }
@@ -40,7 +40,8 @@ func submit (file string) int {
 	if err != nil {
 		//if match, _ := regexp.MatchString("queue limit", err.Error()); match {
 		//	log.Println("Found queue limit for submitting job!")
-		    log.Printf("Submitting %s failed with error:\n[%s]\n", file, err)
+		    log.Printf("Submitting %s failed with error:\n", file)
+		    log.Println(err)
 			log.Println("Waiting for 5 minutes..")
 			time.Sleep(5 * time.Minute)
 			log.Println("Calling back to submit...")
@@ -69,9 +70,14 @@ func main() {
 	fmt.Println("  save to success_submitted_list.txt")
 	fmt.Println("====================================")
 	// Remove previous file
-	exec.Command("sh", "-c", "rm success_submitted_list.txt")
+	cmd := exec.Command("sh", "-c", "rm ./success_submitted_list.txt")
+	_, err := cmd.CombinedOutput()
 
-	err := filepath.Walk(os.Args[1], visit(&files, ".pbs"))
+	if err != nil {
+		log.Fatalf("Remove file error: please contact Shixiang.")
+	}
+
+	err = filepath.Walk(os.Args[1], visit(&files, ".pbs"))
 	if err != nil {
 		log.Panic(err)
 	}
