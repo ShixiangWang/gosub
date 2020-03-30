@@ -6,12 +6,10 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"time"
 )
 
-var fileCount = 0
-var version = "0.2.0"
+var version = "0.3.0"
 
 // init() is called before main()
 func init() {
@@ -40,20 +38,24 @@ func submit (file string) int {
 	cmd := exec.Command("qsub", file)
 	_, err := cmd.CombinedOutput()
 	if err != nil {
-		if match, _ := regexp.MatchString("queue limit", err.Error()); match {
-			log.Println("Found queue limit for submitting job!")
+		//if match, _ := regexp.MatchString("queue limit", err.Error()); match {
+		//	log.Println("Found queue limit for submitting job!")
+		    log.Printf("Submitting %s failed with error:\n[%s]\n", file, err)
 			log.Println("Waiting for 5 minutes..")
 			time.Sleep(5 * time.Minute)
 			log.Println("Calling back to submit...")
 			return submit(file)
-		} else {
-			log.Fatalf("Submitting %s failed with error:\n[%s]\n", file, err)
-		}
+		//} else {
+		//	log.Fatalf("Submitting %s failed with error:\n[%s]\n", file, err)
+		//}
 	}
 
-	c := fmt.Sprintf("echo #%s\t%s >> success_submitted_list.txt", fileCount, file)
-	exec.Command("sh", "-c", c)
-	fileCount ++
+	c := fmt.Sprintf("echo %s >> ./success_submitted_list.txt", file)
+	cmd = exec.Command("sh", "-c", c)
+	_, err = cmd.CombinedOutput()
+	if err != nil {
+		log.Fatalf("Print file list error: please contact Shixiang.")
+	}
 	return 0
 }
 
