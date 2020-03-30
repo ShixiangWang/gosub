@@ -22,6 +22,14 @@ chmod u+x gosub
 ./gosub <path_to_PBS>
 ```
 
+A better way is to use it with nohup and `&`.
+
+```bash
+nohup ./gosub <path_to_PBS> &
+```
+
+So you can free your terminal. Just remember to record the PID in case you want to kill it.
+
 ## Tests
 
 I tested it in a HPC account.
