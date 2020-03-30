@@ -10,6 +10,9 @@ import (
 	"time"
 )
 
+var fileCount = 0
+var version = "0.2.0"
+
 // init() is called before main()
 func init() {
 	if len(os.Args) != 2 {
@@ -48,12 +51,23 @@ func submit (file string) int {
 		}
 	}
 
+	c := fmt.Sprintf("echo #%s\t%s >> success_submitted_list.txt", fileCount, file)
+	exec.Command("sh", "-c", c)
+	fileCount ++
 	return 0
 }
 
 
 func main() {
 	var files []string
+
+	fmt.Printf("gosub version: %s\n", version)
+	fmt.Println("Starting...")
+	fmt.Println("Submitted file list will be")
+	fmt.Println("  save to success_submitted_list.txt")
+	fmt.Println("====================================")
+	// Remove previous file
+	exec.Command("sh", "-c", "rm success_submitted_list.txt")
 
 	err := filepath.Walk(os.Args[1], visit(&files, ".pbs"))
 	if err != nil {
@@ -72,5 +86,8 @@ func main() {
 	for _, file := range files {
 		submit(file)
 	}
+
+	fmt.Println("====================================")
+	fmt.Println("End.")
 }
 
