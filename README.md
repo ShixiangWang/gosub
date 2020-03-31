@@ -10,7 +10,7 @@ Go to [release page](https://github.com/ShixiangWang/gosub/releases) and select 
 An example:
 
 ```bash
-wget -c https://github.com/ShixiangWang/gosub/releases/download/v0.3.1/gosub_0.3.1_Linux_x86_64.tar.gz
+wget -c https://github.com/ShixiangWang/gosub/releases/download/v0.3.2/gosub_0.3.2_Linux_x86_64.tar.gz
 tar zxvf gosub_0.3.2_Linux_x86_64.tar.gz
 chmod u+x gosub
 ./gosub
