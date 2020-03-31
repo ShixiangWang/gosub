@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-var version = "0.3.1"
+var version = "0.3.2"
 
 // init() is called before main()
 func init() {
@@ -33,19 +33,19 @@ func visit(files *[]string, ext string) filepath.WalkFunc {
 	}
 }
 
-func submit (file string) int {
+func submit(file string) int {
 	log.Printf("Submitting %s\n", file)
 	cmd := exec.Command("qsub", file)
 	_, err := cmd.CombinedOutput()
 	if err != nil {
 		//if match, _ := regexp.MatchString("queue limit", err.Error()); match {
 		//	log.Println("Found queue limit for submitting job!")
-		    log.Printf("Submitting %s failed with error:\n", file)
-		    log.Println(err)
-			log.Println("Waiting for 5 minutes..")
-			time.Sleep(5 * time.Minute)
-			log.Println("Calling back to submit...")
-			return submit(file)
+		log.Printf("Submitting %s failed with error:\n", file)
+		log.Println(err)
+		log.Println("Waiting for 5 minutes..")
+		time.Sleep(5 * time.Minute)
+		log.Println("Calling back to submit...")
+		return submit(file)
 		//} else {
 		//	log.Fatalf("Submitting %s failed with error:\n[%s]\n", file, err)
 		//}
@@ -60,6 +60,17 @@ func submit (file string) int {
 	return 0
 }
 
+// Ref: <https://studygolang.com/topics/20>
+func IsFileExist(fileName string) (error, bool) {
+	_, err := os.Stat(fileName)
+	if err == nil {
+		return nil, true
+	}
+	if os.IsNotExist(err) {
+		return nil, false
+	}
+	return err, false
+}
 
 func main() {
 	var files []string
@@ -69,15 +80,19 @@ func main() {
 	fmt.Println("Submitted file list will be")
 	fmt.Println("  save to success_submitted_list.txt")
 	fmt.Println("====================================")
-	// Remove previous file
-	cmd := exec.Command("sh", "-c", "rm ./success_submitted_list.txt")
-	_, err := cmd.CombinedOutput()
 
-	if err != nil {
-		log.Fatalf("Remove file error: please contact Shixiang.")
+	if _, exists := IsFileExist("./success_submitted_list.txt"); exists {
+		// Remove previous file
+		log.Println("Previous file success_submitted_list.txt detected, removing it...")
+		cmd := exec.Command("sh", "-c", "rm ./success_submitted_list.txt")
+		_, err := cmd.CombinedOutput()
+
+		if err != nil {
+			log.Fatalf("Remove previous file error: please contact Shixiang.")
+		}
 	}
 
-	err = filepath.Walk(os.Args[1], visit(&files, ".pbs"))
+	err := filepath.Walk(os.Args[1], visit(&files, ".pbs"))
 	if err != nil {
 		log.Panic(err)
 	}
@@ -98,4 +113,3 @@ func main() {
 	fmt.Println("====================================")
 	fmt.Println("End.")
 }
-
