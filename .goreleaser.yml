@@ -18,13 +18,14 @@ archives:
     darwin: Darwin
     linux: Linux
     windows: Windows
-    386: i386
-    amd64: x86_64
+    386: 32-bit   #i386
+    amd64: 64-bit #x86_64
+  format: binary # instead of tar.gz
   files:
     #- LICENSE.md
     #- CHANGELOG.md
-    - README.md
-    - test_data/*
+    #- README.md
+    #- test_data/*
 checksum:
   name_template: 'checksums.txt'
 snapshot:
