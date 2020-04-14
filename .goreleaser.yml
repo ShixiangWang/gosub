@@ -20,7 +20,7 @@ archives:
     windows: Windows
     386: 32-bit   #i386
     amd64: 64-bit #x86_64
-  format: binary # instead of tar.gz
+  format: tar.gz
   files:
     #- LICENSE.md
     #- CHANGELOG.md
