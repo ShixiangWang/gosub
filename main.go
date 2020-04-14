@@ -9,12 +9,12 @@ import (
 	"time"
 )
 
-var version = "0.3.2"
+var version = "0.4.0"
 
 // init() is called before main()
 func init() {
 	if len(os.Args) != 2 {
-		fmt.Printf("Usage: ./gosub <dir_to_pbs_files>\t(version:%s)\n", version)
+		fmt.Printf("Usage: ./remotes <dir_to_pbs_files>\t(version:%s)\n", version)
 		os.Exit(-1)
 	}
 }
