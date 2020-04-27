@@ -3,11 +3,7 @@
 This program helps submit PBS files in file/directory format one by one.
 If an error is encountered, the program will re-submit in 5 minutes.
 
-## Download
-
-Go to [release page](https://github.com/ShixiangWang/gosub/releases) and select a proper version.
-
-An example:
+## Download and Install
 
 ```bash
 wget -c https://github.com/ShixiangWang/gosub/releases/download/v0.3.2/gosub_0.3.2_Linux_x86_64.tar.gz
