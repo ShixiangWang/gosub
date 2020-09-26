@@ -4,4 +4,4 @@
 
 ## LICENSE
 
-MIT
+MIT@2020, Shixiang Wang
