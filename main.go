@@ -11,7 +11,16 @@ import (
 	"time"
 )
 
-var version = "1.1"
+var version = "1.4"
+
+// init() is called before main()
+func init() {
+	if len(os.Args) < 2 {
+		fmt.Printf("Usage: ./gosub <pbs_files_path>\t(version:%s)\n", version)
+		fmt.Println("See ./gosub -h for help.")
+		os.Exit(-1)
+	}
+}
 
 // Source: https://flaviocopes.com/go-list-files/
 // NOTE: subdirectories will also be visited

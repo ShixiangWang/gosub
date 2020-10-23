@@ -9,8 +9,8 @@ If an error is encountered, the program will re-submit in 5 minutes.
 Pick the latest version of `gosub` and install it, e.g.:
 
 ```bash
-wget -c https://github.com/ShixiangWang/gosub/releases/download/v1.3/gosub_1.3_Linux_x86_64.tar.gz
-tar zxvf gosub_1.3_Linux_x86_64.tar.gz
+wget -c https://github.com/ShixiangWang/gosub/releases/download/v1.4/gosub_1.4_Linux_x86_64.tar.gz
+tar zxvf gosub_1.4_Linux_x86_64.tar.gz
 chmod u+x gosub
 ./gosub -h
 ```
