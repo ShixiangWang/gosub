@@ -1,23 +1,17 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
-var version = "0.3.2"
-
-// init() is called before main()
-func init() {
-	if len(os.Args) != 2 {
-		fmt.Printf("Usage: ./gosub <dir_to_pbs_files>\t(version:%s)\n", version)
-		os.Exit(-1)
-	}
-}
+var version = "1.0"
 
 // Source: https://flaviocopes.com/go-list-files/
 // NOTE: subdirectories will also be visited
@@ -60,6 +54,7 @@ func submit(file string) int {
 	return 0
 }
 
+// IsFileExist check if a file exists
 // Ref: <https://studygolang.com/topics/20>
 func IsFileExist(fileName string) (error, bool) {
 	_, err := os.Stat(fileName)
@@ -72,17 +67,49 @@ func IsFileExist(fileName string) (error, bool) {
 	return err, false
 }
 
+// GenCallPBS check and generate a PBS file
+func GenCallPBS(prefix string) string {
+	number := 1
+	fileName := fmt.Sprintf("./%s%d.pbs", prefix, number)
+	_, exists := IsFileExist(fileName)
+	for exists {
+		log.Printf("File %s exists, trying to set another name.", fileName)
+		number = number + 1
+		fileName = fmt.Sprintf("./%s%d.pbs", prefix, number)
+		_, exists = IsFileExist(fileName)
+	}
+
+	log.Printf("Generating file %s.", fileName)
+	_, err := os.Create(fileName)
+	if err != nil {
+		log.Fatal(err)
+	} else {
+		log.Printf("Created file %s.", fileName)
+	}
+	return fileName
+}
+
 func main() {
-	var files []string
+	pPtr := flag.Bool("p", false, "enable parallel processing.")
+	nodePtr := flag.Int("nodes", 1, "an int to specify node number to use. Only work when -p enabled.")
+	ppnPtr := flag.Int("ppn", 1, "an int to specify cpu number per node. Only work when -p enabled.")
+	outPtr := flag.String("name", "pwork", "an file prefix for generating output PBS file. Only work when -p enabled.")
 
-	fmt.Printf("gosub version: %s\n", version)
-	fmt.Println("Starting...")
-	fmt.Println("Submitted file list will be")
-	fmt.Println("  save to success_submitted_list.txt")
-	fmt.Println("====================================")
+	flag.Parse()
+	inPath := flag.Args()
 
+	//fmt.Println(*pPtr, "-", *nodePtr, "-", *ppnPtr, "-", *outPtr, "-", inPath)
+
+	if len(inPath) != 1 {
+		log.Fatalf("Only one directory path is allowed!")
+	}
+
+	log.Printf("gosub version: %s\n", version)
+	log.Println("Submitted file list will be save to success_submitted_list.txt!")
+	log.Println("====================================")
+
+	// Remove previous file
 	if _, exists := IsFileExist("./success_submitted_list.txt"); exists {
-		// Remove previous file
 		log.Println("Previous file success_submitted_list.txt detected, removing it...")
 		cmd := exec.Command("sh", "-c", "rm ./success_submitted_list.txt")
 		_, err := cmd.CombinedOutput()
@@ -92,24 +119,70 @@ func main() {
 		}
 	}
 
-	err := filepath.Walk(os.Args[1], visit(&files, ".pbs"))
+	// List all PBS files
+	var files []string
+	err := filepath.Walk(inPath[0], visit(&files, ".pbs"))
 	if err != nil {
-		log.Panic(err)
+		log.Fatal(err)
 	}
-
-	//for _, file := range files {
-	//	fmt.Println(file)
-	//}
 
 	if len(files) == 0 {
-		log.Fatalf("No pbs files found in directory %s!", os.Args[1])
+		log.Fatalf("No pbs files found in directory %s!", inPath[0])
 	}
 
-	// Submit PBS one by one
-	for _, file := range files {
-		submit(file)
+	if *pPtr {
+		// Run parallel mode
+		log.Println("Parallel mode is enabled.")
+		log.Println("====================================")
+		totalThreads := *nodePtr * *ppnPtr
+		info := fmt.Sprintf("Use %d threads: %d CPUs per Node.", totalThreads, *ppnPtr)
+		log.Println(info)
+		pbs := GenCallPBS(*outPtr)
+
+		// Use the first file as template
+		// Generate header
+		cmd1 := fmt.Sprintf("cat %s | grep '#PBS' | grep -v nodes | grep -v '#PBS -N' >> %s", files[0], pbs)
+		cmd2 := "echo '#PBS -N gosub_parallel_work' >> " + pbs
+		cmd3 := fmt.Sprintf("echo '#PBS -l nodes=%d:ppn=%d' >> %s", *nodePtr, *ppnPtr, pbs)
+
+		cmd := exec.Command("sh", "-c", cmd1)
+		_, err := cmd.CombinedOutput()
+		if err != nil {
+			log.Fatal(err)
+		}
+		cmd = exec.Command("sh", "-c", cmd2)
+		_, err = cmd.CombinedOutput()
+		if err != nil {
+			log.Fatal(err)
+		}
+		cmd = exec.Command("sh", "-c", cmd3)
+		_, err = cmd.CombinedOutput()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		// Write parallel computation commands to generated file
+		// Doc: https://github.com/shenwei356/rush
+		fileStr := strings.Join(files, " ")
+		log.Printf("Joined file list with spaces.")
+		log.Println(fileStr)
+		cmdP := fmt.Sprintf("echo \"echo %s | rush -D ' ' 'bash {}' -j %d\" >> %s", fileStr, totalThreads, pbs)
+		cmd = exec.Command("sh", "-c", cmdP)
+		_, err = cmd.CombinedOutput()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		log.Println("NOTE the 'rush' command should be available in PATH.")
+		submit(pbs)
+
+	} else {
+		// Submit PBS one by one
+		for _, file := range files {
+			submit(file)
+		}
 	}
 
-	fmt.Println("====================================")
-	fmt.Println("End.")
+	log.Println("====================================")
+	log.Println("End.")
 }
