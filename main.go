@@ -89,6 +89,19 @@ func GenCallPBS(prefix string) string {
 	return fileName
 }
 
+// https://learnku.com/articles/36203
+func removeDuplicateElement(languages []string) []string {
+	result := make([]string, 0, len(languages))
+	temp := map[string]struct{}{}
+	for _, item := range languages {
+		if _, ok := temp[item]; !ok {
+			temp[item] = struct{}{}
+			result = append(result, item)
+		}
+	}
+	return result
+}
+
 func main() {
 	pPtr := flag.Bool("p", false, "enable parallel processing.")
 	nodePtr := flag.Int("nodes", 1, "an int to specify node number to use. Only work when -p enabled.")
@@ -107,10 +120,6 @@ func main() {
 	ppns := *ppnPtr
 	jobs := *jobPtr
 
-	if len(inPath) != 1 {
-		log.Fatalf("Only one directory path is allowed!")
-	}
-
 	log.Printf("gosub version: %s\n", version)
 	log.Println("Submitted file list will be save to success_submitted_list.txt!")
 	log.Println("====================================")
@@ -128,10 +137,15 @@ func main() {
 
 	// List all PBS files
 	var files []string
-	err := filepath.Walk(inPath[0], visit(&files, ".pbs"))
-	if err != nil {
-		log.Fatal(err)
+	for _, f := range inPath {
+		err := filepath.Walk(f, visit(&files, ".pbs"))
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
+	// Make sure no duplicate files
+	files = removeDuplicateElement(files)
+	log.Println("Detected files: ", files)
 
 	if len(files) == 0 {
 		log.Fatalf("No pbs files found in directory %s!", inPath[0])
@@ -163,8 +177,7 @@ func main() {
 			totalJobs = jobs
 		}
 		fileStr := strings.Join(files, " ")
-		log.Printf("Joined file list with spaces.")
-		log.Println(fileStr)
+		log.Println("Joined file list with spaces:", fileStr)
 		cmdP := fmt.Sprintf("echo \"echo %s | rush -D ' ' 'bash {}' -j %d\" >> %s", fileStr, totalJobs, pbs)
 
 		cmds := make([]string, 6)

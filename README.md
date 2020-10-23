@@ -1,22 +1,29 @@
-# GoSub: Submit PBS files 
+# GoSub: Automatically Submit PBS Files to Free Your Hands
 
-This program helps submit PBS files in file/directory format one by one.
+This program helps submit PBS files in file/directory format one by one or generate a work pbs to parallelly run all PBS files.
+
 If an error is encountered, the program will re-submit in 5 minutes.
 
 ## Download and Install
 
+Pick the latest version of `gosub` and install it, e.g.:
+
 ```bash
-wget -c https://github.com/ShixiangWang/gosub/releases/download/v0.3.2/gosub_0.3.2_Linux_x86_64.tar.gz
-tar zxvf gosub_0.3.2_Linux_x86_64.tar.gz
+wget -c https://github.com/ShixiangWang/gosub/releases/download/v1.3/gosub_1.3_Linux_x86_64.tar.gz
+tar zxvf gosub_1.3_Linux_x86_64.tar.gz
 chmod u+x gosub
-./gosub
+./gosub -h
 ```
 
 ## Usage
 
+### Simple mode
+
 ```bash
 ./gosub <path_to_PBS>
 ```
+
+> Both file path and directory path are supported.
 
 A better way is to use it with nohup and `&`.
 
@@ -25,6 +32,36 @@ nohup ./gosub <path_to_PBS> &
 ```
 
 So you can free your terminal. Just remember to record the PID in case you want to kill it.
+
+### Parallel mode
+
+In parallel mode, `gosub` will generate a new work PBS file and use [`rush`](https://github.com/shenwei356/rush) to parallelly run your all PBS files.
+
+```sh
+./gosub -h
+Usage of ./gosub:
+  -hold
+        set it if you want to check and qsub by your own. Only work when -p enabled.
+  -jobs int
+        run n jobs in parallel, at default will use nodes*ppn. Only work when -p enabled.
+  -mem string
+        memory size, e.g. 5gb. Only work when -p enabled. (default "auto")
+  -name string
+        an file prefix for generating output PBS file. Only work when -p enabled. (default "pwork")
+  -nodes int
+        an int to specify node number to use. Only work when -p enabled. (default 1)
+  -p    enable parallel processing.
+  -ppn int
+        an int to specify cpu number per node. Only work when -p enabled. (default 1)
+  -walltime string
+        walltime setting. Only work when -p enabled. (default "24:00:00")
+```
+
+For example:
+
+```sh
+./gosub -p -nodes 3 -ppn 5 -mem 5gb testp
+```
 
 ## Tests
 
@@ -89,4 +126,4 @@ Submitted file list will be
 
 ## LICENSE
 
-MIT
+MIT@ShixiangWang, 2020.
