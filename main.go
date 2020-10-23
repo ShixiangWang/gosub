@@ -93,8 +93,11 @@ func main() {
 	pPtr := flag.Bool("p", false, "enable parallel processing.")
 	nodePtr := flag.Int("nodes", 1, "an int to specify node number to use. Only work when -p enabled.")
 	ppnPtr := flag.Int("ppn", 1, "an int to specify cpu number per node. Only work when -p enabled.")
-	jobPtr := flag.Int("jobs", 0, "run n jobs in parallel, at default will use nodes*ppn.")
+	jobPtr := flag.Int("jobs", 0, "run n jobs in parallel, at default will use nodes*ppn. Only work when -p enabled.")
+	memPtr := flag.String("mem", "auto", "memory size, e.g. 5gb. Only work when -p enabled.")
+	walltimePtr := flag.String("walltime", "24:00:00", "walltime setting. Only work when -p enabled.")
 	outPtr := flag.String("name", "pwork", "an file prefix for generating output PBS file. Only work when -p enabled.")
+	holdPtr := flag.Bool("hold", false, "set it if you want to check and qsub by your own. Only work when -p enabled.")
 
 	flag.Parse()
 	inPath := flag.Args()
@@ -142,27 +145,14 @@ func main() {
 		log.Println(info)
 		pbs := GenCallPBS(*outPtr)
 
+		// Generate a work pbs script
 		// Use the first file as template
 		// Generate header
-		cmd1 := fmt.Sprintf("cat %s | grep '#PBS' | grep -v nodes | grep -v '#PBS -N' >> %s", files[0], pbs)
-		cmd2 := "echo '#PBS -N gosub_parallel_work' >> " + pbs
-		cmd3 := fmt.Sprintf("echo '#PBS -l nodes=%d:ppn=%d' >> %s", nodes, ppns, pbs)
-
-		cmd := exec.Command("sh", "-c", cmd1)
-		_, err := cmd.CombinedOutput()
-		if err != nil {
-			log.Fatal(err)
-		}
-		cmd = exec.Command("sh", "-c", cmd2)
-		_, err = cmd.CombinedOutput()
-		if err != nil {
-			log.Fatal(err)
-		}
-		cmd = exec.Command("sh", "-c", cmd3)
-		_, err = cmd.CombinedOutput()
-		if err != nil {
-			log.Fatal(err)
-		}
+		// Then generate run commands
+		cmd1 := "echo '#PBS -N gosub_parallel_work' >> " + pbs
+		cmd2 := fmt.Sprintf("echo '#PBS -l nodes=%d:ppn=%d' >> %s", nodes, ppns, pbs)
+		cmd3 := fmt.Sprintf("echo '#PBS -l walltime=%s' >> %s", *walltimePtr, pbs)
+		cmd4 := fmt.Sprintf("cat %s | grep '#PBS' | grep -v nodes | grep -v '#PBS -N' | grep -v 'walltime' | grep -v 'mem'>> %s", files[0], pbs)
 
 		// Write parallel computation commands to generated file
 		// Doc: https://github.com/shenwei356/rush
@@ -176,14 +166,31 @@ func main() {
 		log.Printf("Joined file list with spaces.")
 		log.Println(fileStr)
 		cmdP := fmt.Sprintf("echo \"echo %s | rush -D ' ' 'bash {}' -j %d\" >> %s", fileStr, totalJobs, pbs)
-		cmd = exec.Command("sh", "-c", cmdP)
-		_, err = cmd.CombinedOutput()
-		if err != nil {
-			log.Fatal(err)
+
+		cmds := make([]string, 6)
+		if *memPtr == "auto" {
+			cmds = append(cmds, cmd1, cmd2, cmd3, cmd4, cmdP)
+		} else {
+			// Mem setting
+			cmd5 := fmt.Sprintf("echo '#PBS -l mem=%s' >> %s", *memPtr, pbs)
+			cmds = append(cmds, cmd1, cmd2, cmd3, cmd5, cmd4, cmdP)
+		}
+
+		for _, c := range cmds {
+			cmd := exec.Command("sh", "-c", c)
+			_, err := cmd.CombinedOutput()
+			if err != nil {
+				log.Fatal(err)
+			}
 		}
 
 		log.Println("NOTE the 'rush' command should be available in PATH.")
-		submit(pbs)
+		if *holdPtr {
+			log.Println("A 'hold' command is detected, please check the generated pbs and modify it if necessary before you qsub it.")
+		} else {
+			// Submit this work script
+			submit(pbs)
+		}
 
 	} else {
 		// Submit PBS one by one
