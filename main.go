@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-var version = "1.0"
+var version = "1.1"
 
 // Source: https://flaviocopes.com/go-list-files/
 // NOTE: subdirectories will also be visited
@@ -93,12 +93,16 @@ func main() {
 	pPtr := flag.Bool("p", false, "enable parallel processing.")
 	nodePtr := flag.Int("nodes", 1, "an int to specify node number to use. Only work when -p enabled.")
 	ppnPtr := flag.Int("ppn", 1, "an int to specify cpu number per node. Only work when -p enabled.")
+	jobPtr := flag.Int("jobs", 0, "run n jobs in parallel, at default will use nodes*ppn.")
 	outPtr := flag.String("name", "pwork", "an file prefix for generating output PBS file. Only work when -p enabled.")
 
 	flag.Parse()
 	inPath := flag.Args()
 
 	//fmt.Println(*pPtr, "-", *nodePtr, "-", *ppnPtr, "-", *outPtr, "-", inPath)
+	nodes := *nodePtr
+	ppns := *ppnPtr
+	jobs := *jobPtr
 
 	if len(inPath) != 1 {
 		log.Fatalf("Only one directory path is allowed!")
@@ -134,8 +138,7 @@ func main() {
 		// Run parallel mode
 		log.Println("Parallel mode is enabled.")
 		log.Println("====================================")
-		totalThreads := *nodePtr * *ppnPtr
-		info := fmt.Sprintf("Use %d threads: %d CPUs per Node.", totalThreads, *ppnPtr)
+		info := fmt.Sprintf("Use %d threads: %d CPUs per Node.", nodes*ppns, *ppnPtr)
 		log.Println(info)
 		pbs := GenCallPBS(*outPtr)
 
@@ -143,7 +146,7 @@ func main() {
 		// Generate header
 		cmd1 := fmt.Sprintf("cat %s | grep '#PBS' | grep -v nodes | grep -v '#PBS -N' >> %s", files[0], pbs)
 		cmd2 := "echo '#PBS -N gosub_parallel_work' >> " + pbs
-		cmd3 := fmt.Sprintf("echo '#PBS -l nodes=%d:ppn=%d' >> %s", *nodePtr, *ppnPtr, pbs)
+		cmd3 := fmt.Sprintf("echo '#PBS -l nodes=%d:ppn=%d' >> %s", nodes, ppns, pbs)
 
 		cmd := exec.Command("sh", "-c", cmd1)
 		_, err := cmd.CombinedOutput()
@@ -163,10 +166,16 @@ func main() {
 
 		// Write parallel computation commands to generated file
 		// Doc: https://github.com/shenwei356/rush
+		totalJobs := 0
+		if jobs == 0 {
+			totalJobs = nodes * ppns
+		} else {
+			totalJobs = jobs
+		}
 		fileStr := strings.Join(files, " ")
 		log.Printf("Joined file list with spaces.")
 		log.Println(fileStr)
-		cmdP := fmt.Sprintf("echo \"echo %s | rush -D ' ' 'bash {}' -j %d\" >> %s", fileStr, totalThreads, pbs)
+		cmdP := fmt.Sprintf("echo \"echo %s | rush -D ' ' 'bash {}' -j %d\" >> %s", fileStr, totalJobs, pbs)
 		cmd = exec.Command("sh", "-c", cmdP)
 		_, err = cmd.CombinedOutput()
 		if err != nil {
