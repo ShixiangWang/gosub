@@ -40,6 +40,8 @@ In parallel mode, `gosub` will generate a new work PBS file and use [`rush`](htt
 ```sh
 ./gosub -h
 Usage of ./gosub:
+  -abs
+        render and use PBS absolute path.
   -hold
         set it if you want to check and qsub by your own. Only work when -p enabled.
   -jobs int

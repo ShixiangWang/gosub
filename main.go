@@ -24,13 +24,21 @@ func init() {
 
 // Source: https://flaviocopes.com/go-list-files/
 // NOTE: subdirectories will also be visited
-func visit(files *[]string, ext string) filepath.WalkFunc {
+func visit(files *[]string, ext string, abs bool) filepath.WalkFunc {
 	return func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			log.Fatal(err)
 		}
 		if filepath.Ext(path) == ext {
-			*files = append(*files, path)
+			if abs {
+				absPath, err := filepath.Abs(path)
+				if err != nil {
+					log.Fatal(err)
+				}
+				*files = append(*files, absPath)
+			} else {
+				*files = append(*files, path)
+			}
 		}
 		return nil
 	}
@@ -120,6 +128,7 @@ func main() {
 	walltimePtr := flag.String("walltime", "24:00:00", "walltime setting. Only work when -p enabled.")
 	outPtr := flag.String("name", "pwork", "an file prefix for generating output PBS file. Only work when -p enabled.")
 	holdPtr := flag.Bool("hold", false, "set it if you want to check and qsub by your own. Only work when -p enabled.")
+	absPtr := flag.Bool("abs", false, "render and use PBS absolute path.")
 
 	flag.Parse()
 	inPath := flag.Args()
@@ -147,7 +156,7 @@ func main() {
 	// List all PBS files
 	var files []string
 	for _, f := range inPath {
-		err := filepath.Walk(f, visit(&files, ".pbs"))
+		err := filepath.Walk(f, visit(&files, ".pbs", *absPtr))
 		if err != nil {
 			log.Fatal(err)
 		}
